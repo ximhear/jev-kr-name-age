@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
 import type { Prediction } from "../server/predict.ts";
 import { BANDS, bandOf } from "./bands.ts";
+import { COUNTRIES, type CountryCode } from "./countries.ts";
 
-const EXAMPLES = ["서준", "지혜", "영수", "민지", "순자", "현우", "하린", "말자"];
-
-type Shown = { name: string; result: Prediction };
+type Shown = { name: string; country: CountryCode; result: Prediction };
 
 export default function App() {
+  const [country, setCountry] = useState<CountryCode>("kr");
   const [name, setName] = useState("");
   // The last successful result stays on screen while the next one loads, so the card updates in place.
   const [shown, setShown] = useState<Shown | null>(null);
@@ -22,15 +22,26 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/age?name=${encodeURIComponent(trimmed)}`);
+      const res = await fetch(`/api/age?country=${country}&name=${encodeURIComponent(trimmed)}`);
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
-      if (id === latest.current) setShown({ name: trimmed, result: body });
+      if (id === latest.current) setShown({ name: trimmed, country, result: body });
     } catch (err) {
       if (id === latest.current) setError(err instanceof Error ? err.message : String(err));
     } finally {
       if (id === latest.current) setLoading(false);
     }
+  }
+
+  // A result from another country would be misleading, so switching starts fresh.
+  function pickCountry(code: CountryCode) {
+    if (code === country) return;
+    latest.current++;
+    setCountry(code);
+    setName("");
+    setShown(null);
+    setError(null);
+    setLoading(false);
   }
 
   function onSubmit(e: FormEvent) {
@@ -62,12 +73,28 @@ export default function App() {
           <p className="lede">요즘 이름 vs 옛날 이름, 작명 트렌드로 나이대를 콕 집어드려요.</p>
         </header>
 
+        <div className="countries" role="radiogroup" aria-label="나라">
+          {(Object.keys(COUNTRIES) as CountryCode[]).map((code) => (
+            <button
+              key={code}
+              type="button"
+              role="radio"
+              aria-checked={code === country}
+              className={code === country ? "on" : ""}
+              onClick={() => pickCountry(code)}
+            >
+              <span>{COUNTRIES[code].flag}</span>
+              {COUNTRIES[code].label}
+            </button>
+          ))}
+        </div>
+
         <form onSubmit={onSubmit} className="search">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="이름을 입력해 주세요"
-            maxLength={5}
+            placeholder={COUNTRIES[country].placeholder}
+            maxLength={COUNTRIES[country].maxLength}
             autoFocus
             aria-label="이름"
           />
@@ -75,7 +102,7 @@ export default function App() {
         </form>
 
         <div className="chips">
-          {EXAMPLES.map((ex, i) => (
+          {COUNTRIES[country].examples.map((ex, i) => (
             <button
               key={ex}
               type="button"
@@ -93,7 +120,9 @@ export default function App() {
             <span>😵</span> {error}
           </p>
         )}
-        {shown ? <Result {...shown} busy={loading} /> : loading && <Loading />}
+        <div className="stage">
+          {shown ? <Result {...shown} busy={loading} /> : loading ? <Loading /> : <Placeholder />}
+        </div>
 
         <footer>이름만으로 하는 재미용 추정이에요. 실제 나이와 다를 수 있어요 ✌️</footer>
       </main>
@@ -110,6 +139,26 @@ function Loading() {
         </span>
       ))}
       <p>이름 기운 읽는 중…</p>
+    </div>
+  );
+}
+
+/** Holds the result column on wide screens before the first guess; hidden on narrow ones. */
+function Placeholder() {
+  return (
+    <div className="placeholder">
+      <div className="ring">
+        {BANDS.map((b, i) => (
+          <span key={b.key} style={{ "--c": b.color, "--i": i } as CSSProperties}>
+            {b.emoji}
+          </span>
+        ))}
+      </div>
+      <p>
+        이름을 넣으면
+        <br />
+        여기에 나이대가 떠요
+      </p>
     </div>
   );
 }
@@ -139,7 +188,7 @@ function Pct({ value }: { value: number }) {
   return <>{Math.round(useTweened(value * 100))}%</>;
 }
 
-function Result({ name, result, busy }: Shown & { busy: boolean }) {
+function Result({ name, country, result, busy }: Shown & { busy: boolean }) {
   const { age, gender } = result;
   const top = bandOf(age.choice);
   const probs = age.probabilities as Record<string, number>;
@@ -161,7 +210,7 @@ function Result({ name, result, busy }: Shown & { busy: boolean }) {
         <div>
           <p className="who">
             <strong key={name} className="swap">
-              {name}
+              {COUNTRIES[country].flag} {name}
             </strong>{" "}
             님은 아마…
           </p>

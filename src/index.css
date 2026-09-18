@@ -2,10 +2,11 @@
   --bg: #fff8f1;
   --surface: rgba(255, 255, 255, 0.78);
   --text: #1a1030;
-  --muted: #6e6485;
+  --muted: #5b5173;
   --line: rgba(26, 16, 48, 0.1);
   --track: rgba(26, 16, 48, 0.07);
   --shadow: 0 20px 50px -20px rgba(60, 20, 90, 0.35);
+  --hl: 70%;
   --display: "Black Han Sans", "Noto Sans KR", sans-serif;
   font-family: "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
   color: var(--text);
@@ -20,6 +21,7 @@
     --line: rgba(255, 255, 255, 0.1);
     --track: rgba(255, 255, 255, 0.08);
     --shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.7);
+    --hl: 45%;
   }
 }
 * { box-sizing: border-box; }
@@ -65,13 +67,28 @@ button, input { font: inherit; }
 @keyframes pulse { 50% { transform: scale(0.7); } }
 
 h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(32px, 8vw, 46px); line-height: 1.1; letter-spacing: -0.01em; }
+/* Solid text with a highlighter stripe: legible on any background, and the stripe carries the accent. */
 .hl {
-  background: linear-gradient(90deg, var(--accent), #ff9a3c 60%, #ffcf3c);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  padding: 0 0.08em;
+  background: linear-gradient(transparent 52%, color-mix(in srgb, var(--accent) var(--hl), transparent) 52%, color-mix(in srgb, var(--accent) var(--hl), transparent) 92%, transparent 92%);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
 .wave { display: inline-block; animation: peek 2.4s ease-in-out infinite; }
 @keyframes peek { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-14deg); } 80% { transform: rotate(10deg); } }
 .lede { margin: 10px 0 18px; color: var(--muted); line-height: 1.6; font-size: 16px; }
+
+.countries {
+  display: inline-flex; gap: 4px; margin: 0 0 12px; padding: 4px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--line); backdrop-filter: blur(10px);
+}
+.countries button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 0; border-radius: 12px;
+  background: transparent; color: var(--muted); font-weight: 700; font-size: 14px; cursor: pointer;
+  transition: background 0.25s, color 0.25s, transform 0.15s;
+}
+.countries button span { font-size: 18px; line-height: 1; }
+.countries button:hover:not(.on) { color: var(--text); transform: translateY(-1px); }
+.countries button.on { background: var(--text); color: var(--bg); }
 
 .search {
   display: flex; gap: 8px; padding: 8px; border-radius: 22px;
@@ -179,6 +196,40 @@ footer { margin-top: 36px; font-size: 13px; color: var(--muted); text-align: cen
   .emoji { width: 72px; height: 72px; font-size: 40px; }
   .band { font-size: 38px; }
   .bars li { grid-template-columns: 84px 1fr 38px; gap: 8px; }
+}
+
+.placeholder { display: none; }
+
+/* Wide screens (desktop, 16:9 video): controls on the left, result on the right. */
+@media (min-width: 1100px) {
+  .wrap {
+    max-width: 1180px; min-height: 100vh; padding: 40px 48px;
+    display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); column-gap: 56px;
+    grid-template-rows: auto auto auto auto 1fr; align-content: center;
+  }
+  .wrap > :not(.stage) { grid-column: 1; }
+  .stage { grid-column: 2; grid-row: 1 / -1; align-self: center; }
+  h1 { font-size: 64px; }
+  .lede { font-size: 18px; margin-bottom: 28px; }
+  .chips { margin-bottom: 0; }
+  .countries { justify-self: start; }
+  footer { align-self: end; text-align: left; margin-top: 28px; }
+  .card { padding: 30px; }
+  .band { font-size: 54px; }
+  .loading { padding: 120px 0; }
+
+  .placeholder {
+    display: grid; place-items: center; gap: 22px; min-height: 510px; padding: 32px;
+    border-radius: 28px; border: 2px dashed var(--line); background: var(--surface);
+    backdrop-filter: blur(16px); text-align: center;
+  }
+  .placeholder p { margin: 0; font-family: var(--display); font-size: 30px; line-height: 1.3; color: var(--muted); }
+  .ring { display: flex; gap: 10px; }
+  .ring span {
+    display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; font-size: 26px;
+    background: color-mix(in srgb, var(--c) 18%, transparent); border: 1.5px solid color-mix(in srgb, var(--c) 50%, transparent);
+    animation: hop 1.8s ease-in-out infinite; animation-delay: calc(var(--i) * 120ms);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
